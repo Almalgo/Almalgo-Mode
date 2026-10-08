@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Almalgo agentic loop</title>
+<style>
+:root{
+  --bg:#0d1017;--panel:#151a23;--panel2:#1b2130;--line:#283044;--text:#e6e9f0;--mute:#8b93a7;--dim:#5b6378;
+  --you:#f5b84b;--agent:#68d391;--gh:#b38cff;--stack:#4fd1c5;--accent:#7aa2ff;--warn:#f6874b;--bad:#fc8181;
+  --r:12px;--mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:64px}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.5 Inter,system-ui,-apple-system,Segoe UI,sans-serif}
+code,.mono{font-family:var(--mono);font-size:.88em}
+a{color:inherit}
+nav{position:sticky;top:0;z-index:20;display:flex;gap:4px;align-items:center;padding:10px 24px;background:rgba(13,16,23,.88);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);overflow-x:auto}
+nav b{margin-right:14px;white-space:nowrap}
+nav a{color:var(--mute);text-decoration:none;padding:5px 10px;border-radius:8px;font-size:13px;white-space:nowrap}
+nav a:hover,nav a.on{color:var(--text);background:var(--panel2)}
+section{max-width:1240px;margin:0 auto;padding:64px 24px 24px}
+h1{font-size:44px;line-height:1.1;margin:0 0 14px;letter-spacing:-.02em}
+h2{font-size:28px;margin:0 0 6px;letter-spacing:-.01em}
+h2 small{display:block;font-size:15px;color:var(--mute);font-weight:400;margin-top:4px;letter-spacing:0}
+.lead{color:var(--mute);font-size:18px;max-width:760px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.grid{display:grid;gap:14px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:99px;font-size:12px;border:1px solid var(--line);background:var(--panel2);color:var(--mute);white-space:nowrap}
+.dot{width:8px;height:8px;border-radius:50%;display:inline-block}
+.chip{font-family:var(--mono);font-size:12px;padding:2px 8px;border-radius:6px;background:#202840;color:#c9d4ff;border:1px solid #2c3656;cursor:pointer;white-space:nowrap}
+.chip:hover{border-color:var(--accent)}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0}
+button{font:inherit;color:inherit;cursor:pointer}
+.btn{background:var(--panel2);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:13px}
+.btn:hover{border-color:var(--accent)}
+.btn.on{background:#22305a;border-color:var(--accent)}
+
+/* hero */
+.hero{display:grid;grid-template-columns:1.05fr 1fr;gap:40px;align-items:center;padding-top:56px}
+.stats{display:flex;gap:28px;margin-top:26px}
+.stats div{font-size:13px;color:var(--mute)} .stats b{display:block;font-size:30px;color:var(--text)}
+#ring text{font-family:Inter,system-ui,sans-serif}
+.ringseg{cursor:pointer;transition:opacity .2s}
+.ringseg:hover{opacity:.85}
+
+/* gate */
+.gate{display:grid;grid-template-columns:200px 1fr;gap:0;margin-top:24px}
+.gate-q{display:flex;align-items:center;justify-content:center;text-align:center;padding:20px;border:2px dashed var(--accent);border-radius:var(--r);font-weight:600}
+.lanes{display:grid;gap:14px;padding-left:24px;position:relative}
+.lane{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:14px;border-radius:var(--r);background:var(--panel);border:1px solid var(--line)}
+.lane .tag{font-size:12px;color:var(--mute);width:100%;margin-bottom:4px}
+.step{padding:6px 11px;border-radius:8px;background:var(--panel2);border:1px solid var(--line);font-family:var(--mono);font-size:13px}
+.arrow{color:var(--dim)}
+.tail{margin-top:14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:14px;border-radius:var(--r);background:linear-gradient(90deg,#1a2a22,#151a23);border:1px solid #2b4a3a}
+
+/* flows */
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:18px 0}
+.flowbox{position:relative}
+.flow{display:flex;gap:0;align-items:stretch;overflow-x:auto;padding:8px 2px 16px}
+.fnode{flex:0 0 150px;position:relative;padding:12px;border-radius:10px;background:var(--panel);border:1px solid var(--line);transition:all .25s;cursor:pointer;min-height:96px}
+.fnode .who{font-size:10px;text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px;font-weight:700}
+.fnode .t{font-family:var(--mono);font-size:13px;font-weight:600}
+.fnode.on{transform:translateY(-4px);box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.fnode.past{opacity:.55}
+.fsep{flex:0 0 26px;display:flex;align-items:center;justify-content:center;color:var(--dim)}
+.fdesc{min-height:52px;padding:14px 16px;border-radius:10px;background:var(--panel2);border:1px solid var(--line);display:flex;gap:12px;align-items:center}
+.fdesc .n{font-family:var(--mono);color:var(--mute)}
+.controls{display:flex;gap:8px;align-items:center;margin:10px 0}
+
+/* graph */
+.graphwrap{display:grid;grid-template-columns:1fr 340px;gap:14px;margin-top:16px}
+#graph{position:relative;min-height:400px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+#graph svg{position:absolute;inset:0;pointer-events:none}
+.colhead{position:absolute;top:12px;font-size:11px;text-transform:uppercase;letter-spacing:.08em;font-weight:700;text-align:center}
+.gnode{position:absolute;height:30px;display:flex;align-items:center;gap:6px;padding:0 9px;border-radius:7px;background:var(--panel2);border:1px solid var(--line);font-family:var(--mono);font-size:12px;cursor:pointer;transition:opacity .15s,border-color .15s,background .15s;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gnode.you::after{content:"/";position:absolute;right:7px;color:var(--you);font-weight:700}
+.gnode.hl{border-color:var(--text);background:#26304a}
+.gnode.out{border-color:var(--agent)} .gnode.in{border-color:var(--you)}
+#graph.focus .gnode:not(.hl):not(.out):not(.in){opacity:.22}
+path.e{fill:none;stroke:#3a4560;stroke-width:1.2;transition:all .15s}
+#graph.focus path.e{opacity:.06}
+#graph.focus path.e.out{opacity:1;stroke:var(--agent);stroke-width:2}
+#graph.focus path.e.in{opacity:1;stroke:var(--you);stroke-width:2}
+.detail{position:sticky;top:70px;align-self:start}
+.detail h3{margin:0 0 4px;font-family:var(--mono);font-size:18px}
+.detail .row{margin-top:12px} .detail .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:3px}
+.detail .chips{display:flex;flex-wrap:wrap;gap:5px}
+.filters{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+
+/* playbooks */
+.pbgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px;margin-top:16px}
+.pb{cursor:pointer;transition:all .15s}
+.pb:hover,.pb.on{border-color:var(--accent);background:#182039}
+.pb h4{margin:0 0 4px;font-size:15px} .pb p{margin:0;color:var(--mute);font-size:13px}
+.pb .n{float:right;font-size:12px;color:var(--dim);font-family:var(--mono)}
+#pbsteps{margin-top:14px}
+.steps{counter-reset:s;list-style:none;padding:0;margin:12px 0 0;display:grid;gap:8px}
+.steps li:not(.sub){counter-increment:s}
+.steps li{display:grid;grid-template-columns:30px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-radius:9px;background:var(--panel2);border:1px solid var(--line)}
+.steps li::before{content:counter(s);width:24px;height:24px;border-radius:50%;background:#22305a;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700}
+.steps .chips{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.common{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px;padding:10px 12px;border-radius:9px;border:1px dashed var(--line);color:var(--mute);font-size:13px}
+
+/* verify */
+.vwrap{display:grid;grid-template-columns:260px 1fr;gap:16px;margin-top:16px}
+.vchanges{display:grid;gap:6px;align-content:start}
+.vchanges button{text-align:left;padding:9px 12px;border-radius:8px;background:var(--panel);border:1px solid var(--line);font-size:14px}
+.vchanges button.on{border-color:var(--stack);background:#14302d}
+.ladder{display:flex;flex-direction:column-reverse;gap:8px}
+.rung{display:grid;grid-template-columns:44px 170px 1fr;gap:12px;align-items:center;padding:12px 14px;border-radius:10px;background:var(--panel);border:1px solid var(--line);transition:all .2s}
+.rung .num{font-size:22px;font-weight:800;color:var(--dim)}
+.rung .cmd{font-family:var(--mono);font-size:13px;color:#cfe}
+.rung .note{font-size:12.5px;color:var(--mute);grid-column:3}
+.rung.on{border-color:var(--stack);background:#13292a}
+.rung.on .num{color:var(--stack)}
+.rung.off{opacity:.3}
+.vrules{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px}
+.vrules .card{padding:12px 14px;font-size:13px}
+
+/* principles / autonomy */
+.prgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+.pr h4{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent)}
+.pr div{padding:8px 0;border-top:1px solid var(--line)} .pr div:first-of-type{border-top:0}
+.pr b{display:block;font-size:14px} .pr span{font-size:12.5px;color:var(--mute)}
+.auto{display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px;margin-top:16px}
+.auto h4{margin:0 0 10px;font-size:15px}
+.auto ul{margin:0;padding-left:18px;color:var(--mute);font-size:13.5px} .auto li{margin:4px 0}
+.auto .go{border-color:#2b4a3a} .auto .stop{border-color:#5a2f2f} .auto .run{border-color:#2c3656}
+
+/* files */
+.tree{font-family:var(--mono);font-size:13px;line-height:1.75;white-space:pre;color:var(--mute);overflow-x:auto}
+.tree b{color:var(--text);font-weight:600} .tree i{color:var(--dim);font-style:normal}
+.prov{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+.prov h4{margin:0 0 6px} .prov p{margin:0 0 10px;color:var(--mute);font-size:13px}
+.bar{display:flex;height:14px;border-radius:7px;overflow:hidden;margin:18px 0 6px}
+.qs{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:16px}
+.qs .card{position:relative;padding-left:52px}
+.qs .card b{display:block;margin-bottom:4px}.qs .card span{color:var(--mute);font-size:13.5px}
+.qs .card i{position:absolute;left:16px;top:16px;width:26px;height:26px;border-radius:50%;background:#22305a;font-style:normal;font-weight:800;display:flex;align-items:center;justify-content:center;font-size:13px}
+.states{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;margin-top:16px}
+.states .card{flex:1 1 180px;border-top:3px solid}
+.states code{font-size:13px;font-weight:700}
+.states p{margin:6px 0 0;color:var(--mute);font-size:13px}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13px}.kv code{color:#c9d4ff}.kv span{color:var(--mute)}
+.sub{grid-template-columns:1fr!important;background:none!important;border:0!important;padding:10px 0 0!important;font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--accent);font-weight:700}
+.sub::before{display:none!important}
+footer{max-width:1240px;margin:40px auto;padding:20px 24px;color:var(--dim);font-size:13px;border-top:1px solid var(--line)}
+
+
+/* ================= PRINT / PDF ================= */
+.ponly,.ponly-i{display:none}
+html.print .ponly-i{display:inline}
+html.print nav,html.print .webonly{display:none!important}
+html.print .ponly{display:block}
+html.print body{background:var(--bg)}
+html.print section{max-width:none;padding:0 0 14px;break-inside:auto}
+html.print .page,html.print section[data-page]{min-height:0}
+html.print .page,html.print section[data-page]{break-before:page;padding-top:2px}
+html.print h2{font-size:22px;margin-bottom:12px}
+html.print .lead{font-size:15px}
+html.print .hero{padding-top:20px;grid-template-columns:1.1fr 1fr}
+html.print h1{font-size:34px}
+html.print #ring{max-width:360px;justify-self:center}
+html.print .card,html.print .fnode,html.print .rung,html.print .steps li,html.print .lane{break-inside:avoid}
+html.print .gnode{transition:none}
+html.print .graphwrap{grid-template-columns:1fr}
+html.print #detail{display:none}
+html.print .tail,html.print .lane{flex-wrap:wrap}
+.pflow{margin-bottom:16px;break-inside:avoid}
+.pflow h3{margin:0 0 2px;font-size:16px}.pflow p{margin:0 0 8px;color:var(--mute);font-size:13px}
+.pflow .row{display:flex;flex-wrap:wrap;gap:6px 0;align-items:stretch}
+.pflow .fnode{flex:0 0 calc((100% - 6*22px)/7);min-height:0;padding:8px 9px;cursor:default}
+.pflow .fnode .d{font-size:11px;color:var(--mute);margin-top:4px;line-height:1.35}
+.pflow .fsep{flex:0 0 22px;font-size:13px}
+.pskills{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.pskill{padding:12px 14px;border-left:4px solid}
+.pskill h3{margin:0;font-family:var(--mono);font-size:14.5px;display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.pskill h3 small{font-family:Inter,system-ui,sans-serif;font-weight:500;font-size:11px;color:var(--mute)}
+.pskill p{margin:5px 0 0;font-size:12.5px}
+.pskill .m{display:grid;grid-template-columns:70px 1fr;gap:3px 8px;margin-top:7px;font-size:11.5px;color:var(--mute)}
+.pskill .m b{color:var(--dim);font-weight:600;text-transform:uppercase;font-size:10px;letter-spacing:.06em;padding-top:2px}
+.pskill .chips{display:flex;gap:4px;flex-wrap:wrap}.pskill .chip{font-size:10.5px;padding:1px 6px}
+.pstage{margin:14px 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.1em;font-weight:800}
+.ppb{margin-bottom:14px}
+.ppb h3{margin:0;font-size:17px;display:flex;justify-content:space-between;gap:10px;align-items:baseline}
+.ppb h3 small{font-size:11px;font-family:var(--mono);color:var(--dim)}
+.ppb .steps{margin-top:8px;gap:5px}.ppb .steps li{padding:7px 10px;font-size:13px}
+.ppb .reply{margin-top:6px;font-size:12.5px;color:var(--mute)}
+.vmatrix{width:100%;border-collapse:separate;border-spacing:0;font-size:12.5px;margin-top:14px}
+.vmatrix th,.vmatrix td{padding:7px 8px;border-bottom:1px solid var(--line);text-align:center}
+.vmatrix th:first-child,.vmatrix td:first-child{text-align:left}
+.vmatrix thead th{color:var(--mute);font-weight:600;font-size:11px;vertical-align:bottom}
+.vmatrix td.y{color:var(--stack);font-weight:800}
+.toc{display:grid;grid-template-columns:1fr 1fr;gap:6px 30px;margin-top:10px;font-size:14px}
+.toc div{display:flex;gap:10px;border-bottom:1px dotted var(--line);padding:5px 0}.toc i{color:var(--dim);font-style:normal;font-family:var(--mono);width:22px}
+.stamp{font-family:var(--mono);font-size:11px;color:var(--dim)}
+@page{size:A4 landscape;margin:0}
+html.print body{padding:10mm 11mm 12mm}
+@media print{html,body{-webkit-print-color-adjust:exact;print-color-adjust:exact}}
+
+html.print .vrules{grid-template-columns:repeat(3,1fr)!important}
+html.print .prgrid{grid-template-columns:repeat(4,1fr)!important}
+html.print .auto,html.print .prov{grid-template-columns:repeat(3,1fr)!important}
+html.print .hero{grid-template-columns:1.1fr 1fr!important}
+html.print .gate{grid-template-columns:180px 1fr!important}
+html.print .lanes{padding-left:18px!important;margin-top:0!important}
+html.print #files>.grid,html.print #sync>.grid{grid-template-columns:1fr 1fr!important}
+html.print .qs{grid-template-columns:repeat(3,1fr)!important}
+html.print #verify .rung{padding:7px 12px}
+html.print #verify .ladder{gap:5px!important}
+html.print .vmatrix{break-inside:avoid}
+html.print #issues,html.print #autonomy,html.print #sync,html.print #start,html.print #principles{break-inside:avoid}
+html.print h2{break-after:avoid}
+html.print .tree{font-size:11.5px;white-space:pre-wrap}
+html.print .vmatrix td,html.print .vmatrix th{padding:5px 8px}
+@media (max-width:980px){
+  .hero,.graphwrap,.vwrap,.gate{grid-template-columns:1fr}
+  .prgrid,.auto,.prov,.vrules{grid-template-columns:1fr 1fr}
+  .lanes{padding-left:0;margin-top:14px}
+}
+</style>
+</head>
+<body>
+<nav id="nav">
+  <b>Almalgo loop</b>
+  <a href="#top">Overview</a><a href="#start">Quick start</a><a href="#gate">The loop</a><a href="#flows">Flows</a><a href="#map">Skill map</a>
+  <a href="#playbooks">Playbooks</a><a href="#verify">Verify</a><a href="#principles">Principles</a><a href="#autonomy">Autonomy</a><a href="#files">Files</a><a href="#sync">Keep in sync</a><a href="?print">Print view</a><a href="../agentic-loop-guide.pdf" style="color:var(--you)">PDF ↓</a>
+</nav>
+
+<!-- PDF COVER -->
+<section class="ponly" id="cover">
+  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:20px">
+    <div><div class="pill" style="margin-bottom:14px"><span class="pname">this project</span> · team guide</div>
+    <h1 style="font-size:40px">The Almalgo agentic loop</h1>
+    <p class="lead">How coding agents work in this repo: one entry point, size-gated alignment, nine playbooks, a verification ladder, two-axis review, narrow PRs. Every skill, every flow, every step.</p></div>
+  </div>
+  <h2 style="margin-top:22px;font-size:16px">Contents</h2>
+  <div class="toc" id="toc"></div>
+  <p class="stamp" id="stamp" style="margin-top:20px"></p>
+</section>
+
+<!-- HERO -->
+<section id="top" data-page class="hero">
+  <div>
+    <div class="pill" style="margin-bottom:16px"><span class="dot" style="background:var(--agent)"></span><span class="pname">this project</span> · <code>.agents/</code></div>
+    <h1>One loop for every agent task in <span class="pname">this project</span>.</h1>
+    <p class="lead"><span class="n-skills">27</span> skills in <code>.agents/skills/</code>. Align on the big things, build in small verified slices, review on two axes, ship narrow PRs. One entry point: <code>/almalgo-mode</code>.</p>
+    <div class="stats">
+      <div><b id="s-skills">27</b>skills</div>
+      <div><b id="s-pb">9</b>playbooks</div>
+      <div><b id="s-rungs">6</b>verify rungs</div>
+      <div><b id="s-pr">17</b>principles</div>
+    </div>
+    <div class="legend" style="margin-top:26px">
+      <span class="pill"><span class="dot" style="background:var(--you)"></span>you type it</span>
+      <span class="pill"><span class="dot" style="background:var(--agent)"></span>agent does it</span>
+      <span class="pill"><span class="dot" style="background:var(--gh)"></span>GitHub issue / PR</span>
+      <span class="pill"><span class="dot" style="background:var(--stack)"></span>local stack</span>
+    </div>
+  </div>
+  <svg id="ring" viewBox="0 0 440 440" width="100%" aria-label="Loop overview"></svg>
+</section>
+
+<!-- QUICK START -->
+<section id="start">
+  <h2>Quick start<small>Your first task with the loop, in six moves.</small></h2>
+  <div class="qs" id="qs"></div>
+</section>
+
+<!-- GATE -->
+<section id="gate" data-page>
+  <h2>The loop is size-gated<small>Big work is aligned before code. Small work goes straight in. Both end the same way.</small></h2>
+  <div class="gate">
+    <div class="gate-q">Is "done" clear and the change contained?</div>
+    <div class="lanes">
+      <div class="lane" style="border-color:#3a3a6a">
+        <div class="tag">NO · big, ambiguous, crosses packages</div>
+        <span class="step" style="border-color:var(--you)">/grill-with-docs</span><span class="arrow">→</span>
+        <span class="step" style="border-color:var(--you)">/to-spec</span><span class="arrow">→</span>
+        <span class="step" style="border-color:var(--you)">/to-tickets</span><span class="arrow">→</span>
+        <span class="step" style="border-color:var(--gh)">sub-issues · ready-for-agent</span><span class="arrow">→</span>
+        <span class="step" style="border-color:var(--you)">/almalgo-mode × each ticket</span>
+      </div>
+      <div class="lane" style="border-color:#3a5a3a">
+        <div class="tag">YES · a bug, a labelled issue, a contained change</div>
+        <span class="step" style="border-color:var(--you)">/almalgo-mode</span><span class="arrow">→</span>
+        <span class="step">read AGENTS.md · GLOSSARY · ADRs</span><span class="arrow">→</span>
+        <span class="step">pick 1 of 9 playbooks</span><span class="arrow">→</span>
+        <span class="step">copy its steps into the todo list</span>
+      </div>
+      <div class="lane" style="border-color:#5a3a5a">
+        <div class="tag">TOO BIG for one session · many open decisions</div>
+        <span class="step" style="border-color:var(--you)">/wayfinder</span><span class="arrow">→</span>
+        <span class="step" style="border-color:var(--gh)">map of decision tickets</span><span class="arrow">→</span>
+        <span class="step">one decision per session</span><span class="arrow">→</span>
+        <span class="step" style="border-color:var(--you)">/to-spec</span>
+      </div>
+    </div>
+  </div>
+  <div class="tail">
+    <b style="margin-right:6px">Every code playbook ends:</b>
+    <span class="step" style="border-color:var(--stack)">verify ladder</span><span class="arrow">→</span>
+    <span class="step" style="border-color:var(--agent)">code-review</span><span class="arrow">→</span>
+    <span class="step">fix every <i>Act on</i></span><span class="arrow">→</span>
+    <span class="step" style="border-color:var(--agent)">pr · ready, Closes #N</span><span class="arrow">→</span>
+    <span class="step" style="border-color:var(--you)">you merge</span>
+  </div>
+</section>
+
+<!-- FLOWS -->
+<section id="flows" data-page>
+  <h2>Flows, step by step<small><span class="webonly">Pick a flow, press play, or click any step.</span><span class="ponly-i">Six flows. Each card is one step; the colour says who does it.</span></small></h2>
+  <div class="webonly"><div class="tabs" id="flowtabs"></div>
+  <p id="flowblurb" class="lead" style="font-size:15px;margin:0 0 8px"></p>
+  <div class="flowbox"><div class="flow" id="flow"></div></div>
+  <div class="controls">
+    <button class="btn" id="fprev">◀</button><button class="btn" id="fplay">▶ Play</button><button class="btn" id="fnext">▶︎▶︎</button>
+  </div>
+  <div class="fdesc" id="fdesc"></div></div>
+  <div class="ponly" id="pflows"></div>
+</section>
+
+<!-- MAP -->
+<section id="map" data-page>
+  <h2>Skill map<small><span class="webonly">Hover a skill to see what it loads (green) and what loads it (amber). Click for details.</span><span class="ponly-i">Every line is one skill loading another. Full cards with Loads / Loaded by follow.</span> A <span style="color:var(--you)">/</span> means you type it.</small></h2>
+  <div class="filters webonly" style="margin-top:12px">
+    <button class="btn on" data-f="all">All</button>
+    <button class="btn" data-f="you">You type</button>
+    <button class="btn" data-f="agent">Agent reaches for</button>
+  </div>
+  <div class="graphwrap">
+    <div id="graph"><svg id="edges"></svg></div>
+    <div class="card detail" id="detail"></div>
+  </div>
+  <div class="ponly" id="pskills" style="margin-top:18px"></div>
+</section>
+
+<!-- ISSUES -->
+<section id="issues" data-page>
+  <h2>Issue states<small>The triage labels the skills read and write. They sit alongside the area, type and priority labels.</small></h2>
+  <div class="states" id="states"></div>
+</section>
+
+<!-- PLAYBOOKS -->
+<section id="playbooks" data-page>
+  <h2>almalgo-mode playbooks<small>The agent copies the chosen playbook's steps verbatim into its todo list. Skipped steps stay as <code>skip: reason</code>.</small></h2>
+  <div class="webonly"><div class="pbgrid" id="pbgrid"></div>
+  <div class="card" id="pbsteps"></div></div>
+  <div class="ponly" id="ppb"></div>
+</section>
+
+<!-- VERIFY -->
+<section id="verify" data-page>
+  <h2>Verify: prove it on the real stack<small>Ladder from <code>docs/agents/verify.md</code>. <span class="webonly">Pick what your diff touches to see the minimum rungs.</span><span class="ponly-i">The matrix below gives the minimum rungs per kind of diff.</span> Always reach the rung that exercises the changed behavior.</small></h2>
+  <div class="vwrap webonly">
+    <div class="vchanges" id="vchanges"></div>
+    <div class="ladder" id="ladder"></div>
+  </div>
+  <div class="ponly" id="pverify"></div>
+  <div class="vrules">
+    <div class="card"><b style="color:var(--agent)">Passed</b><br>Rung + command + observed output, in the PR's Evidence.</div>
+    <div class="card"><b style="color:var(--you)">Not run</b><br>Say which rung and why. Never reported as passed.</div>
+    <div class="card"><b style="color:var(--bad)">Wrong surface</b><br>Typecheck for a UI change is not a pass. Flag it.</div>
+  </div>
+</section>
+
+<!-- PRINCIPLES -->
+<section id="principles" data-page>
+  <h2>Principles<small>Inlined in almalgo-mode. The agent names the one that shaped each decision.</small></h2>
+  <div class="prgrid" id="prgrid"></div>
+</section>
+
+<!-- AUTONOMY -->
+<section id="autonomy">
+  <h2>Autonomy &amp; subagents</h2>
+  <div class="auto">
+    <div class="card go"><h4>✅ Just do it</h4><ul>
+      <li>Edit, commit on a feature branch</li><li>Run the local stack</li><li>Open a ready PR when asked</li><li>Comment on issues</li><li>Settle "which approach" by prototyping, not asking</li></ul></div>
+    <div class="card stop"><h4>🛑 Always ask first</h4><ul>
+      <li>Force-push shared branches, push to main</li><li>Wiping a database / deleting data you didn't create</li><li>Merging (unless you said merge/land/ship)</li><li>Deploys, hosted envs, prod data</li><li>Labels, milestones, repo settings</li><li>Messages to people outside the session</li></ul></div>
+    <div class="card run"><h4>🤖 Subagents</h4><ul>
+      <li><code>almalgo-agent</code> (<code>.cursor/agents/</code>) reads almalgo-mode first</li><li><code>model: inherit</code>, no pinned models</li><li>Fresh subagent per piece of work, full brief</li><li>Parallel editors each get a worktree</li><li>You own the output: read the diff, write your own summary</li></ul></div>
+  </div>
+</section>
+
+<!-- FILES -->
+<section id="files" data-page>
+  <h2>Where it lives &amp; where it came from</h2>
+  <div class="grid" style="grid-template-columns:1.1fr 1fr;margin-top:16px">
+    <div class="card tree" id="tree"></div>
+    <div>
+      <div class="bar" id="provbar"></div>
+      <div class="legend" id="provlegend"></div>
+      <div class="prov">
+        <div class="card"><h4>mattpocock/skills</h4><p>via Almalgo/engineering-skills. Alignment, specs, tickets, tdd, debugging, review, PRs, domain docs.</p></div>
+        <div class="card"><h4>pstack</h4><p>Cursor plugin. how, why, architect, and the mode + playbooks + principles pattern. Model pinning and Cursor-only deps removed.</p></div>
+        <div class="card"><h4>New in Almalgo Mode</h4><p>almalgo-mode, almalgo-agent, setup-almalgo-mode, the verify-ladder contract, this guide, check.mjs, install.sh.</p></div>
+      </div>
+      <div class="card" style="margin-top:12px;font-size:13.5px;color:var(--mute)">
+        <b style="color:var(--text)">Merged where both overlapped</b><br>
+        tdd · code-review · pr · handoff · retro · prototype each got one merged version, not two competing ones.
+        <br><br><b style="color:var(--text)">Updates</b><br>Pull new kit versions by re-running <code>install.sh</code>. It replaces kit files and never touches <code>docs/agents/</code>, <code>AGENTS.md</code> or <code>GLOSSARY.md</code>.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SYNC -->
+<section id="sync" data-page>
+  <h2>Keep this guide in sync<small>The guide and its PDF are part of the loop. A change to .agents/ or docs/agents/ is not done until they match.</small></h2>
+  <div class="grid" style="grid-template-columns:1fr 1fr;margin-top:16px">
+    <ol class="steps" id="syncsteps" style="margin:0"></ol>
+    <div class="card" id="repoconf"></div>
+  </div>
+</section>
+
+<footer>Source: <code>.agents/loop-guide/</code> (content in <code>data.js</code>). PDF: <code>.agents/agentic-loop-guide.pdf</code>, rebuilt by <code>bash .agents/loop-guide/build.sh</code>. Checked by <code>node .agents/skills/check.mjs</code>.</footer>
+
+<script>addEventListener("error",e=>{if(/ResizeObserver/.test(e.message))return;window.__guideError=e.message+" @"+e.lineno;document.documentElement.dataset.ready="1"})</script>
+<script src="data.js"></script>
+<script src="../../docs/agents/guide.js" onerror="window.__noProjectGuide=1"></script>
+<script>
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const S=window.SKILLS, STG=Object.fromEntries(STAGES.map(s=>[s.id,s]));
+const ACT={you:'var(--you)',agent:'var(--agent)',gh:'var(--gh)',stack:'var(--stack)'};
+const ACTL={you:'you',agent:'agent',gh:'GitHub',stack:'local stack'};
+const el=(t,a={},h='')=>{const e=document.createElement(t);for(const k in a)e.setAttribute(k,a[k]);e.innerHTML=h;return e};
+const chip=n=>`<span class="chip" data-skill="${n}">${S[n]&&S[n].who==='you'?'/':''}${n}</span>`;
+
+const PRINT=/[?&]print\b/.test(location.search);
+if(PRINT)document.documentElement.classList.add('print');
+$$('.pname').forEach(e=>e.textContent=PROJECT.name);document.title='Almalgo agentic loop · '+PROJECT.name;
+$('#s-skills').textContent=Object.keys(S).length;$$('.n-skills').forEach(e=>e.textContent=Object.keys(S).length);
+$('#s-pb').textContent=PLAYBOOKS.length;$('#s-rungs').textContent=VERIFY.rungs.length;
+$('#s-pr').textContent=PRINCIPLES.reduce((n,[,l])=>n+l.length,0);
+const stepItems=steps=>steps.map(([t,sk,sub])=>(sub?`<li class="sub">${sub}</li>`:'')+`<li><span>${t}</span><span class="chips">${sk.map(chip).join('')}</span></li>`).join('');
+$('#qs').innerHTML=QUICKSTART.map(([b,s],i)=>`<div class="card"><i>${i+1}</i><b>${b}</b><span>${s}</span></div>`).join('');
+$('#states').innerHTML=ISSUE_STATES.map(([l,m,c])=>`<div class="card" style="border-top-color:${c}"><code style="color:${c}">${l}</code><p>${m}</p></div>`).join('');
+$('#syncsteps').innerHTML=KEEP_IN_SYNC.map(s=>`<li><span>${s}</span><span></span></li>`).join('');
+$('#repoconf').innerHTML='<div class="k" style="font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:8px">Repo config the skills read</div><div class="kv">'+REPO_CONFIG.map(([f,d])=>`<code>${f}</code><span>${d}</span>`).join('')+'</div>';
+
+/* ---------- ring ---------- */
+(()=>{
+  const svg=$('#ring'),cx=220,cy=220,R=170,r=112;
+  const segs=[['Align','grill · spec','#7aa2ff','gate'],['Understand','how · why · design','#4fd1c5','map'],['Build','tdd · debug','#68d391','playbooks'],['Verify','the ladder','#4fd1c5','verify'],['Review','two axes','#f6874b','map'],['Ship','narrow PRs','#b38cff','playbooks']];
+  const n=segs.length,gap=.035;
+  const p=(a,rad)=>[cx+rad*Math.cos(a),cy+rad*Math.sin(a)];
+  let h='<defs><marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M0,0L10,5L0,10z" fill="#5b6378"/></marker></defs>';
+  segs.forEach((s,i)=>{
+    const a0=-Math.PI/2+i*2*Math.PI/n+gap,a1=-Math.PI/2+(i+1)*2*Math.PI/n-gap;
+    const [x0,y0]=p(a0,R),[x1,y1]=p(a1,R),[x2,y2]=p(a1,r),[x3,y3]=p(a0,r);
+    const am=(a0+a1)/2,[tx,ty]=p(am,(R+r)/2);
+    h+=`<g class="ringseg" data-go="${s[3]}"><path d="M${x0},${y0}A${R},${R} 0 0 1 ${x1},${y1}L${x2},${y2}A${r},${r} 0 0 0 ${x3},${y3}z" fill="${s[2]}" fill-opacity=".16" stroke="${s[2]}" stroke-width="1.5"/>
+    <text x="${tx}" y="${ty-4}" text-anchor="middle" fill="#e6e9f0" font-size="15" font-weight="700">${s[0]}</text>
+    <text x="${tx}" y="${ty+13}" text-anchor="middle" fill="#8b93a7" font-size="10">${s[1]}</text></g>`;
+  });
+  h+=`<circle cx="${cx}" cy="${cy}" r="${r-14}" fill="#151a23" stroke="#283044"/>
+  <text x="${cx}" y="${cy-8}" text-anchor="middle" fill="#f5b84b" font-family="ui-monospace,monospace" font-size="17" font-weight="700">/almalgo-mode</text>
+  <text x="${cx}" y="${cy+14}" text-anchor="middle" fill="#8b93a7" font-size="11">one entry point</text>
+  <text x="${cx}" y="${cy+30}" text-anchor="middle" fill="#8b93a7" font-size="11">9 playbooks · 1 finish</text>`;
+  svg.innerHTML=h;
+  svg.querySelectorAll('.ringseg').forEach(g=>g.onclick=()=>location.hash=g.dataset.go);
+})();
+
+/* ---------- flows ---------- */
+let F=0,FI=0,timer=null;
+FLOWS.forEach((f,i)=>{const b=el('button',{class:'btn'},f.name);b.onclick=()=>{stop();F=i;FI=0;drawFlow()};$('#flowtabs').append(b)});
+function drawFlow(){
+  const f=FLOWS[F];
+  $$('#flowtabs .btn').forEach((b,i)=>b.classList.toggle('on',i===F));
+  $('#flowblurb').textContent=f.blurb;
+  const box=$('#flow');box.innerHTML='';
+  f.nodes.forEach(([who,t],i)=>{
+    if(i)box.append(el('div',{class:'fsep'},'→'));
+    const n=el('div',{class:'fnode'+(i===FI?' on':'')+(i<FI?' past':'')},`<div class="who" style="color:${ACT[who]}">${ACTL[who]}</div><div class="t">${t}</div>`);
+    n.style.borderColor=i===FI?ACT[who]:'';n.style.borderTop=`3px solid ${ACT[who]}`;
+    n.onclick=()=>{stop();FI=i;drawFlow()};box.append(n);
+  });
+  const [who,t,d]=f.nodes[FI];
+  $('#fdesc').innerHTML=`<span class="n">${FI+1}/${f.nodes.length}</span><span class="pill"><span class="dot" style="background:${ACT[who]}"></span>${ACTL[who]}</span><b class="mono">${t}</b><span style="color:var(--mute)">${d}</span>`;
+  box.children[FI*2]?.scrollIntoView({block:'nearest',inline:'center',behavior:'smooth'});
+}
+const step=d=>{const n=FLOWS[F].nodes.length;FI=(FI+d+n)%n;drawFlow()};
+function stop(){clearInterval(timer);timer=null;$('#fplay').textContent='▶ Play'}
+$('#fprev').onclick=()=>{stop();step(-1)};$('#fnext').onclick=()=>{stop();step(1)};
+$('#fplay').onclick=()=>{if(timer)return stop();$('#fplay').textContent='❚❚ Pause';timer=setInterval(()=>{if(FI===FLOWS[F].nodes.length-1)return stop();step(1)},1700)};
+drawFlow();
+
+/* ---------- graph ---------- */
+const callers={};Object.entries(S).forEach(([k,v])=>v.calls.forEach(c=>(callers[c]=callers[c]||[]).push(k)));
+let filter='all',selected='almalgo-mode';
+function layoutGraph(){
+  const g=$('#graph'),W=g.clientWidth;
+  g.querySelectorAll('.gnode,.colhead').forEach(e=>e.remove());
+  // Rows = stages, skills laid out left to right inside each row.
+  const narrow=W<560,lw=narrow?0:150,pad=14,nw=narrow?W-pad*2:Math.min(240,Math.max(214,(W-lw-pad*2)/3-12)),per=Math.max(1,Math.floor((W-lw-pad)/(nw+12))),pos={};
+  let y=narrow?34:18;
+  STAGES.forEach(st=>{
+    const names=Object.keys(S).filter(k=>S[k].stage===st.id);
+    const rows=Math.ceil(names.length/per);
+    const h=el('div',{class:'colhead'},st.label);Object.assign(h.style,{left:pad+'px',top:(narrow?y-22:y+6+(rows-1)*21)+'px',width:(narrow?W-pad*2:lw-20)+'px',textAlign:'left',color:st.color});g.append(h);
+    names.forEach((n,i)=>{
+      const x=(narrow?pad:lw)+(i%per)*(nw+12),yy=y+Math.floor(i/per)*42,d=el('div',{class:'gnode '+S[n].who,'data-n':n,title:n},n);if(n.length>24)d.style.fontSize='11px';
+      Object.assign(d.style,{left:x+'px',top:yy+'px',width:nw+'px',borderLeft:`3px solid ${st.color}`});
+      if(filter!=='all'&&S[n].who!==filter)d.style.opacity=.18;
+      d.onmouseenter=()=>focusNode(n);d.onmouseleave=()=>focusNode(null);d.onclick=()=>select(n);
+      g.append(d);pos[n]={x,y:yy,w:nw};
+    });
+    y+=rows*42+(narrow?40:22);
+  });
+  const H=y;g.style.height=H+'px';
+  let e='';
+  Object.entries(S).forEach(([a,v])=>v.calls.forEach(b=>{
+    const A=pos[a],B=pos[b];if(!A||!B)return;
+    const ax=A.x+A.w/2,bx=B.x+B.w/2;
+    if(Math.abs(A.y-B.y)<2){const y1=A.y+30,k=26;e+=`<path class="e" data-a="${a}" data-b="${b}" d="M${ax},${y1}C${ax},${y1+k} ${bx},${y1+k} ${bx},${y1}"/>`;return}
+    const down=B.y>A.y,y1=down?A.y+30:A.y,y2=down?B.y:B.y+30,k=Math.abs(y2-y1)*.5;
+    e+=`<path class="e" data-a="${a}" data-b="${b}" d="M${ax},${y1}C${ax},${y1+(down?k:-k)} ${bx},${y2-(down?k:-k)} ${bx},${y2}"/>`;
+  }));
+  $('#edges').setAttribute('viewBox',`0 0 ${W} ${H}`);$('#edges').innerHTML=e;
+}
+function focusNode(n){
+  const g=$('#graph');g.classList.toggle('focus',!!n);
+  $$('.gnode').forEach(d=>{const k=d.dataset.n;d.classList.toggle('hl',k===n);d.classList.toggle('out',!!n&&S[n].calls.includes(k));d.classList.toggle('in',!!n&&(callers[n]||[]).includes(k))});
+  $$('path.e').forEach(p=>{p.classList.toggle('out',p.dataset.a===n);p.classList.toggle('in',p.dataset.b===n)});
+}
+function select(n){
+  selected=n;const s=S[n],st=STG[s.stage];
+  $('#detail').innerHTML=`<div class="pill" style="margin-bottom:8px"><span class="dot" style="background:${st.color}"></span>${st.label}</div>
+  <h3>${s.who==='you'?'/':''}${n}</h3>
+  <div class="legend" style="margin:6px 0"><span class="pill"><span class="dot" style="background:${s.who==='you'?'var(--you)':'var(--agent)'}"></span>${s.who==='you'?'you type it':'agent can reach for it'}</span><span class="pill">${s.src}</span></div>
+  <div class="row">${s.what}</div>
+  <div class="row"><div class="k">When</div>${s.when}</div>
+  <div class="row"><div class="k">Reads / writes</div>${s.io}</div>
+  <div class="row"><div class="k">Loads</div><div class="chips">${s.calls.map(chip).join('')||'<span style="color:var(--dim)">nothing</span>'}</div></div>
+  <div class="row"><div class="k">Loaded by</div><div class="chips">${(callers[n]||[]).map(chip).join('')||'<span style="color:var(--dim)">only you</span>'}</div></div>`;
+}
+$$('.filters .btn').forEach(b=>b.onclick=()=>{filter=b.dataset.f;$$('.filters .btn').forEach(x=>x.classList.toggle('on',x===b));layoutGraph()});
+document.addEventListener('click',e=>{const c=e.target.closest('.chip');if(c){select(c.dataset.skill);if(!c.closest('#detail'))$('#map').scrollIntoView()}});
+let lastW=0;new ResizeObserver(()=>{const w=$('#graph').clientWidth;if(w!==lastW){lastW=w;layoutGraph()}}).observe($('#graph'));select(selected);
+
+/* ---------- playbooks ---------- */
+let P=2;
+PLAYBOOKS.forEach((p,i)=>{const c=el('div',{class:'card pb'},`<span class="n">${p.steps.length} steps</span><h4>${p.name}</h4><p>${p.when}</p>`);c.onclick=()=>{P=i;drawPb()};$('#pbgrid').append(c)});
+function drawPb(){
+  const p=PLAYBOOKS[P];$$('.pb').forEach((c,i)=>c.classList.toggle('on',i===P));
+  const code=!['investigation','plan','babysit','auto'].includes(p.id);
+  $('#pbsteps').innerHTML=`<div style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap"><h3 style="margin:0">${p.name}</h3><span class="pill">Reply: ${p.out}</span></div>
+  <p style="margin:8px 0 0;color:var(--mute)"><b style="color:var(--text)">${p.own}</b> ${p.when}</p><ol class="steps">${stepItems(p.steps)}</ol>
+  ${code?`<div class="common">Shared finish → ${chip('code-review')} fix every <i>Act on</i> → ${chip('pr')} → you merge</div>`:''}`;
+}
+drawPb();
+
+/* ---------- verify ---------- */
+let V=Math.min(2,Math.max(0,VERIFY.changes.length-1));
+VERIFY.changes.forEach(([t],i)=>{const b=el('button',{},t);b.onclick=()=>{V=i;drawV()};$('#vchanges').append(b)});
+function drawV(){
+  $$('#vchanges button').forEach((b,i)=>b.classList.toggle('on',i===V));
+  if(!VERIFY.changes.length){$('#ladder').innerHTML='<div class="card" style="color:var(--you)">No verify ladder yet. Run /setup-almalgo-mode to write docs/agents/verify.md and docs/agents/guide.js.</div>';return}
+  const on=VERIFY.changes[V][1];
+  $('#ladder').innerHTML=VERIFY.rungs.map(([n,c,note],i)=>`<div class="rung ${on.includes(i)?'on':on.length?'off':'off'}"><span class="num">${i+1}</span><b>${n}</b><span class="cmd">${c}</span><span></span><span></span><span class="note">${note}</span></div>`).join('')
+   +(on.length?'':'<div class="card" style="text-align:center;color:var(--mute)">No rung needed: read it rendered.</div>');
+}
+drawV();
+
+/* ---------- principles ---------- */
+PRINCIPLES.forEach(([g,list])=>$('#prgrid').append(el('div',{class:'card pr'},`<h4>${g}</h4>`+list.map(([b,s])=>`<div><b>${b}</b><span>${s}</span></div>`).join(''))));
+
+/* ---------- files ---------- */
+$('#tree').innerHTML=`<b>AGENTS.md</b>                 <i># "Agent skills" pointer</i>
+<b>GLOSSARY.md</b>               <i># domain terms</i>
+<b>.cursor/agents/</b>
+  almalgo-agent.md        <i># subagent, model: inherit</i>
+<b>.agents/skills/</b>
+  README.md               <i># index + credits</i>
+  check.mjs               <i># names, links, cross-refs</i>
+  <b>almalgo-mode/</b>
+    SKILL.md              <i># router · principles · autonomy</i>
+    playbooks/*.md        <i># 9 playbooks</i>
+  setup-almalgo-mode/     <i># fills docs/agents/ for a project</i>
+  how/ why/ architect/    <i># pstack, adapted</i>
+  grill-*/ to-*/ tdd/ …   <i># 23 from mattpocock/skills</i>
+<b>docs/agents/</b>           <i># PROJECT-OWNED, never upgraded</i>
+  verify.md               <i># the verify ladder</i>
+  guide.js                <i># project name + ladder for this guide</i>
+  issue-tracker.md        <i># tracker commands</i>
+  triage-labels.md        <i># state label strings</i>
+  domain.md               <i># glossary / ADR layout</i>
+<b>.agents/</b>
+  agentic-loop-guide.pdf  <i># this guide</i>
+  <b>loop-guide/</b>
+    index.html            <i># interactive + print view</i>
+    data.js               <i># kit guide content</i>
+    build.sh · render.mjs <i># → the PDF</i>
+    pdf-source.sha256     <i># freshness stamp</i>`;
+const prov={matt:0,pstack:0,both:0,new:0};
+Object.values(S).forEach(s=>{const m=/matt/.test(s.src),p=/pstack/.test(s.src);prov[/^New/.test(s.src)?'new':m&&p?'both':m?'matt':'pstack']++});
+const PC={matt:['mattpocock','#7aa2ff'],pstack:['pstack','#f6874b'],both:['merged','#b38cff'],new:['new','#68d391']},tot=Object.values(prov).reduce((a,b)=>a+b);
+$('#provbar').innerHTML=Object.entries(prov).map(([k,v])=>`<span style="flex:${v};background:${PC[k][1]}"></span>`).join('');
+$('#provlegend').innerHTML=Object.entries(prov).map(([k,v])=>`<span class="pill"><span class="dot" style="background:${PC[k][1]}"></span>${PC[k][0]} · ${v}</span>`).join('');
+
+
+/* ---------- print rendering ---------- */
+if(PRINT){
+  const sk=(n,c)=>`<span class="chip">${S[n]&&S[n].who==='you'?'/':''}${n}</span>`;
+  $('#pflows').innerHTML=FLOWS.map(f=>`<div class="pflow card"><h3>${f.name}</h3><p>${f.blurb}</p><div class="row">${f.nodes.map(([w,tt,d],i)=>(i?'<div class="fsep">→</div>':'')+`<div class="fnode" style="border-top:3px solid ${ACT[w]}"><div class="who" style="color:${ACT[w]}">${i+1} · ${ACTL[w]}</div><div class="t">${tt}</div><div class="d">${d}</div></div>`).join('')}</div></div>`).join('');
+  $('#pskills').innerHTML='<h2>Every skill<small>Grouped by stage. A / means you type it; otherwise the agent can also reach for it on its own.</small></h2>'+STAGES.map(st=>{
+    const names=Object.keys(S).filter(k=>S[k].stage===st.id);
+    return `<div class="pstage" style="color:${st.color}">${st.label} · ${names.length}</div><div class="pskills">`+names.map(n=>{const s=S[n];return `<div class="card pskill" style="border-left-color:${st.color}">
+      <h3><span>${s.who==='you'?'/':''}${n}</span><small>${s.who==='you'?'you type it':'agent can reach for it'} · ${s.src}</small></h3>
+      <p>${s.what}</p><div class="m"><b>When</b><span>${s.when}</span><b>Files</b><span>${s.io}</span>
+      <b>Loads</b><span class="chips">${s.calls.map(c=>sk(c)).join('')||'—'}</span><b>Loaded by</b><span class="chips">${(callers[n]||[]).map(c=>sk(c)).join('')||'only you'}</span></div></div>`}).join('')+'</div>';
+  }).join('');
+  const code=id=>!['investigation','plan','babysit','auto'].includes(id);
+  $('#ppb').innerHTML=PLAYBOOKS.map((p,i)=>`<div class="card ppb${i?' ':''}"><h3><span>${i+1}. ${p.name}</span><small>almalgo-mode/playbooks/${p.file}</small></h3>
+    <p style="margin:6px 0 0;font-size:13px;color:var(--mute)"><b style="color:var(--text)">${p.own}</b> ${p.when}</p>
+    <ol class="steps">${stepItems(p.steps)}</ol>${code(p.id)?`<div class="common" style="margin-top:6px;padding:6px 10px">Shared finish → ${chip('code-review')} fix every <i>Act on</i> → ${chip('pr')} → you merge</div>`:''}
+    <div class="reply"><b style="color:var(--text)">Reply:</b> ${p.out}</div></div>`).join('');
+  $('#pverify').innerHTML=`<div class="ladder" style="flex-direction:column;margin-top:12px">${VERIFY.rungs.map(([n,c,note],i)=>`<div class="rung on"><span class="num">${i+1}</span><b>${n}</b><span class="cmd">${c}</span><span></span><span></span><span class="note">${note}</span></div>`).join('')}</div>
+   <table class="vmatrix"><thead><tr><th>Your diff touches</th>${VERIFY.rungs.map(([n],i)=>`<th>${i+1}<br>${n}</th>`).join('')}</tr></thead><tbody>
+   ${VERIFY.changes.map(([c,on])=>`<tr><td>${c}</td>${VERIFY.rungs.map((_,i)=>on.includes(i)?'<td class="y">●</td>':'<td style="color:var(--dim)">·</td>').join('')}</tr>`).join('')}</tbody></table>`;
+  const toc=[['Overview','The loop at a glance'],['Quick start','Your first task'],['The loop','The size gate'],['Flows',FLOWS.length+' flows, step by step'],['Skill map','How skills load each other'],['Every skill',Object.keys(S).length+' skill cards'],['Issue states','Triage labels'],['Playbooks',PLAYBOOKS.length+' playbooks, every step'],['Verify','The ladder + matrix'],['Principles',$('#s-pr').textContent+' principles'],['Autonomy','What needs your OK'],['Files & sources','Where it lives'],['Keep in sync','Updating this guide']];
+  $('#toc').innerHTML=toc.map(([a,b],i)=>`<div><i>${String(i+1).padStart(2,'0')}</i><b>${a}</b><span style="color:var(--mute);margin-left:auto">${b}</span></div>`).join('');
+  const sp=new URLSearchParams(location.search);
+  $('#stamp').textContent=`Built ${sp.get('date')||new Date().toISOString().slice(0,10)} from .agents/ ${sp.get('sha')?'@ '+sp.get('sha').slice(0,12):''} · source: .agents/loop-guide/`;
+  $('#graph').style.width='100%';
+}
+document.documentElement.dataset.ready='1';
+
+/* nav highlight */
+const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting)$$('nav a').forEach(a=>a.classList.toggle('on',a.getAttribute('href')==='#'+e.target.id))}),{rootMargin:'-40% 0px -55% 0px'});
+$$('section').forEach(s=>io.observe(s));
+</script>
+</body>
+</html>
