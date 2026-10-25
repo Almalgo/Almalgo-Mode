@@ -54,6 +54,7 @@ Name the principle that shaped a decision when you explain it. Each line says wh
 - **Boundary discipline.** Validate at trust boundaries (incoming requests, webhooks, uploads, env and config, external APIs) and trust internal types after that. Keep auth where the project's `AGENTS.md` says it lives; don't scatter it.
 - **Type discipline.** Make illegal states unrepresentable. Parse external data into domain types at the boundary No `any`, no unchecked casts to silence the compiler. Derive types from the authoritative schema (ORM models, API schemas, generated clients) instead of re-declaring them.
 - **Idempotent operations.** For imports, migrations, jobs, webhooks, and anything retried. Running it twice, or after a crash halfway, must converge to the same state (upserts on natural keys, not insert-then-fix).
+- **Trace every caller.** Before changing a shared component, helper, hook, or type, list its call sites and what each relies on. Keep each caller working or change it in the same diff; a request naming one surface does not limit the change's impact to that surface.
 - **Migrate callers, then delete.** When replacing an internal API. Move every caller and delete the old one in the same change. No compatibility shims inside the codebase.
 
 **Verification**

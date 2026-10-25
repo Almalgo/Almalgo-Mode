@@ -96,7 +96,7 @@ window.SKILLS = {
     when: 'Setup the agent cannot do itself.', io: 'A bash script (ephemeral unless you keep it).', calls: [] },
 
   'code-review': { stage: 'ship', who: 'agent', src: 'mattpocock/skills + pstack triage',
-    what: 'Two parallel reviewers. Standards: AGENTS.md rules plus Fowler smells. Spec: the GitHub issue. The lead then sorts findings into Act on, Consider, Noted, and Dismissed.',
+    what: 'Two parallel reviewers. Standards: AGENTS.md rules, Fowler smells, and review heuristics. Spec: the GitHub issue. The lead sorts findings into Act on, Consider, Noted, and Dismissed, and flags visual and external checks.',
     when: 'Before every PR. Every Act on gets fixed.', io: 'Report. Consider items go into the PR body.', calls: [] },
   'pr': { stage: 'ship', who: 'agent', src: 'mattpocock/skills + pstack process',
     what: 'Branch off main, small ordered commits, review first, Conventional Commits title, open ready (never draft). Body: Summary visual, Scope, Evidence before/after, Merge Danger.',
@@ -212,6 +212,7 @@ window.PRINCIPLES = [
     ['Boundary discipline', 'Validate requests, webhooks, env, external APIs. Trust types inside.'],
     ['Type discipline', 'Illegal states unrepresentable. Parse at the edge; derive types from the schema.'],
     ['Idempotent operations', 'Imports, migrations, jobs, webhooks converge when run twice.'],
+    ['Trace every caller', 'Check every call site before changing shared code; keep each working or migrate it.'],
     ['Migrate callers, then delete', 'Move every caller and remove the old API in one change.'],
   ]],
   ['Verification', [

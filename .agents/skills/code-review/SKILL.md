@@ -55,6 +55,8 @@ Each smell reads *what it is* → *how to fix*; match it against the diff:
 - **Middle Man**: a class or function that mostly just delegates onward. → cut it, call the real target direct.
 - **Refused Bequest**: a subclass or implementer that ignores or overrides most of what it inherits. → drop the inheritance, use composition.
 
+The smells say what to look for; [`HEURISTICS.md`](HEURISTICS.md) says how to reach a finding, suggest a fix, and word the report. Read it now. Pass its Finding section to the Standards sub-agent.
+
 ### 4. Spawn both sub-agents in parallel
 
 Issue both sub-agent calls together, in the foreground, and aggregate the reports they return.
@@ -62,7 +64,7 @@ Issue both sub-agent calls together, in the foreground, and aggregate the report
 **Standards sub-agent prompt** should include:
 
 - The full diff command and commit list.
-- The list of standards-source files you found in step 3, **plus the smell baseline from step 3** pasted in full (the sub-agent has no other access to it).
+- The list of standards-source files you found in step 3, **plus the smell baseline and Finding section of `HEURISTICS.md`** pasted in full (the sub-agent has no other access to them).
 - The brief: "Report, per file/hunk where relevant, (a) every place the diff violates a documented standard: cite the standard (file + the rule); and (b) any baseline smell you spot: name it and quote the hunk. Distinguish hard violations from judgement calls: documented-standard breaches can be hard, but baseline smells are always judgement calls, and a documented repo standard overrides the baseline. Skip anything tooling enforces. Under 400 words."
 
 **Spec sub-agent prompt** should include:
@@ -88,7 +90,7 @@ You are the lead reviewer, a pragmatic senior engineer, not a neutral aggregator
 - **Noted**: technically valid, not actionable at this stage.
 - **Dismissed**: wrong, nitpicky, or missing context. Give the concrete reason.
 
-Sort within an axis, never across them. When this review runs inside `/implement`, `/implement-spec`, or `/almalgo-mode`, fix every **Act on** before opening the PR and list the **Consider** items in the PR body.
+Sort within an axis, never across them. Word findings per the Reporting section of `HEURISTICS.md`, shape suggestions per its Suggesting section, and close with changes worth checking visually or against an external system. When this review runs inside `/implement`, `/implement-spec`, or `/almalgo-mode`, fix every **Act on** before opening the PR and list the **Consider** items in the PR body.
 
 ## Why two axes
 
